@@ -1,0 +1,483 @@
+@import 'leaflet/dist/leaflet.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Two palettes, one class set. Components never name a theme — they use the
+ * semantic tokens below, so switching themes is a variable swap, not a rewrite.
+ */
+@layer base {
+  :root {
+    /*
+     * Light field-operations theme, built from four reference colours:
+     * olive #54643A, khaki #947A5C, stone #B3A89E, muted gray #6F6B62.
+     * Surfaces are separated by tone, not by shadow.
+     */
+    --canvas: 231 226 218;
+    --panel: 244 241 235;
+    --panel2: 236 231 222;
+    --panel3: 222 215 203;
+    --edge: 201 192 179;
+    --edge2: 179 168 158;
+    --ink: 46 43 38;
+    --muted: 111 107 98;
+    --dim: 140 134 123;
+
+    /* Olive carries interaction and selection; khaki carries secondary action. */
+    --info: 84 100 58;
+    --action: 148 122 92;
+    --ok: 62 122 75;
+    --warn: 181 118 42;
+    --crit: 163 58 50;
+    /* Model output: muted brown, differentiated without leaving the palette. */
+    --ai: 122 106 79;
+
+    --brand: 84 100 58;
+    --accent: 148 122 92;
+    /* Aircraft track colour — distinct from every operational state. */
+    --drone: 47 111 181;
+
+    --shadow-card: 0 1px 2px rgb(46 43 38 / 0.05);
+    --shadow-raised: 0 8px 22px -12px rgb(46 43 38 / 0.25);
+    /* Warm the basemap so it belongs to the same environment. */
+    --map-filter: saturate(0.82) sepia(0.1) brightness(1.01);
+    --tile-bg: 222 215 203;
+  }
+
+  .dark {
+    /* Night interpretation of the same palette — earth tones, never black. */
+    --canvas: 26 26 22;
+    --panel: 34 34 28;
+    --panel2: 42 42 35;
+    --panel3: 51 50 42;
+    --edge: 61 59 50;
+    --edge2: 82 79 67;
+    --ink: 231 227 217;
+    --muted: 168 162 150;
+    --dim: 122 116 102;
+
+    --info: 124 143 88;
+    --action: 183 154 118;
+    --ok: 90 155 99;
+    --warn: 209 154 69;
+    --crit: 200 86 76;
+    --ai: 155 137 104;
+
+    --brand: 124 143 88;
+    --accent: 183 154 118;
+    --drone: 91 155 213;
+
+    --shadow-card: none;
+    --shadow-raised: 0 12px 30px -16px rgb(0 0 0 / 0.7);
+    --map-filter: invert(1) hue-rotate(180deg) sepia(0.18) saturate(0.55) brightness(0.86);
+    --tile-bg: 34 34 28;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+    font-feature-settings: 'tnum' 1;
+    /* ~3% technical grid: structure without becoming wallpaper. */
+    background-image:
+      linear-gradient(rgb(var(--muted) / 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--muted) / 0.03) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-info/60 ring-offset-2 ring-offset-canvas rounded;
+  }
+
+  /* One transition curve and duration across the interface. */
+  a,
+  button,
+  input,
+  select,
+  [role='button'],
+  [role='tab'] {
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    transition-duration: 200ms;
+  }
+
+  /* Scrolling is a mechanism, not a visual element. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--muted) / 0.35) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--muted) / 0.3);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--muted) / 0.5);
+  }
+}
+
+@layer components {
+  .panel {
+    @apply bg-panel border border-edge rounded-panel;
+  }
+  .panel-head {
+    @apply flex items-center justify-between px-3.5 py-2.5 border-b border-edge;
+  }
+  .label {
+    @apply text-2xs font-medium uppercase tracking-[0.07em] text-dim;
+  }
+  .value {
+    @apply font-mono text-sm font-medium text-ink;
+  }
+  .row-hover {
+    @apply transition-colors duration-200 hover:bg-panel2;
+  }
+  /* Operational surface: the default framed container. */
+  .surface {
+    @apply border border-edge bg-panel rounded-panel;
+  }
+  /* Critical surface: an incident that demands operator attention. */
+  .surface-critical {
+    @apply rounded-panel border border-crit/45 bg-crit/[0.06];
+  }
+  /* Action surface: the system proposing a decision. */
+  .surface-action {
+    @apply rounded-panel border border-action/45 bg-action/[0.06];
+  }
+  /* Telemetry surface: instrument readouts, no card chrome. */
+  .surface-telemetry {
+    @apply rounded-panel border border-edge bg-panel2;
+  }
+  /* Evidence surface: camera imagery, dark regardless of theme. */
+  .surface-evidence {
+    @apply overflow-hidden rounded-panel border border-edge bg-black;
+  }
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.09em] text-dim;
+  }
+  .metric-lg {
+    @apply font-mono text-2xl font-semibold leading-none text-ink;
+  }
+  .metric {
+    @apply font-mono text-base font-medium leading-none text-ink;
+  }
+  /* Enterprise table chrome, used by every data table. */
+  .table-head {
+    @apply border-b border-edge bg-panel2 text-2xs font-semibold uppercase tracking-[0.06em] text-muted;
+  }
+}
+
+/*
+ * Stacking order, single source of truth:
+ *   500  map controls and overlays (inside the Leaflet pane)
+ *   900  application header
+ *   950  header popovers (alerts, operator)
+ *  1100  drawers
+ *  1150  table row menus (fixed-positioned, must clear drawers' backdrop edge)
+ *  1200  modal dialogues
+ *  2000  boot splash
+ * Anything new belongs in this list before it gets a z-index.
+ */
+
+/* ------------------------------ Leaflet chrome ------------------------------ */
+
+.leaflet-container {
+  background: rgb(var(--tile-bg));
+  font-family: inherit;
+  outline: none;
+}
+
+/* Only the tile pane is recoloured, so markers and overlays keep true colours. */
+.resq-map .leaflet-tile-pane {
+  filter: var(--map-filter);
+}
+
+.leaflet-control-attribution {
+  background: rgb(var(--panel) / 0.82) !important;
+  color: rgb(var(--dim)) !important;
+  font-size: 10px !important;
+}
+.leaflet-control-attribution a {
+  color: rgb(var(--muted)) !important;
+}
+
+.leaflet-control-scale-line {
+  background: rgb(var(--panel) / 0.9) !important;
+  border-color: rgb(var(--edge2)) !important;
+  color: rgb(var(--muted)) !important;
+  font-size: 10px !important;
+  padding: 1px 5px !important;
+}
+
+.resq-marker {
+  background: transparent;
+  border: none;
+}
+
+.resq-tooltip {
+  background: rgb(var(--panel)) !important;
+  border: 1px solid rgb(var(--edge2)) !important;
+  color: rgb(var(--ink)) !important;
+  font-size: 11px !important;
+  box-shadow: var(--shadow-card) !important;
+  padding: 3px 7px !important;
+  border-radius: 5px !important;
+}
+.resq-tooltip::before {
+  display: none !important;
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: rgb(var(--panel));
+  color: rgb(var(--ink));
+  border: 1px solid rgb(var(--edge2));
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+
+/* Layout hardening: prevent grid/flex children from forcing siblings over one another. */
+@layer utilities {
+  .resq-page {
+    min-width: 0;
+    min-height: 0;
+    max-width: 100%;
+  }
+
+  .resq-page > *,
+  .resq-grid-item {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 1023px) {
+  /* The alert sits below the full mobile chrome (header + status + compact nav). */
+  .resq-critical-alert {
+    top: 152px;
+  }
+}
+
+@media (max-width: 640px) {
+  .resq-critical-alert {
+    left: 8px;
+    right: 8px;
+    top: 150px;
+    width: auto;
+    max-width: none;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* ------------------------------ Boot sequence ------------------------------ */
+
+.resq-drone-scene {
+  position: relative;
+  perspective: 900px;
+  perspective-origin: 50% 45%;
+}
+
+.resq-drone-body {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  animation:
+    resq-approach 2.1s cubic-bezier(0.22, 0.9, 0.24, 1) both,
+    resq-hover 3.6s ease-in-out 2.1s infinite;
+}
+
+.resq-rotor {
+  position: absolute;
+  width: 62px;
+  height: 16px;
+  margin-left: -31px;
+  margin-top: -8px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgb(var(--info) / 0.42) 0%,
+    rgb(var(--info) / 0.1) 55%,
+    transparent 72%
+  );
+  transform: rotateX(74deg);
+  animation: resq-rotor-spin 0.42s linear infinite;
+}
+
+.resq-drone-shadow {
+  position: absolute;
+  left: 50%;
+  bottom: -26px;
+  width: 46%;
+  height: 12px;
+  margin-left: -23%;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.55);
+  filter: blur(7px);
+  animation: resq-shadow 3.6s ease-in-out 2.1s infinite;
+  opacity: 0;
+}
+
+.resq-nav-light-green {
+  fill: rgb(var(--ok));
+  animation: resq-blink 1.7s ease-in-out infinite;
+}
+
+.resq-nav-light-red {
+  fill: rgb(var(--crit));
+  animation: resq-blink 1.7s ease-in-out 0.85s infinite;
+}
+
+/* Flies in from off-screen left, banking hard, then levels out. */
+@keyframes resq-approach {
+  0% {
+    opacity: 0;
+    transform: translate3d(-62%, 34%, -520px) rotateZ(19deg) rotateX(24deg) rotateY(-26deg);
+  }
+  45% {
+    opacity: 1;
+  }
+  72% {
+    transform: translate3d(4%, -5%, -40px) rotateZ(-6deg) rotateX(10deg) rotateY(7deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotateZ(0deg) rotateX(6deg) rotateY(0deg);
+  }
+}
+
+/* Station-keeping: a real multirotor never sits perfectly still. */
+@keyframes resq-hover {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotateX(6deg) rotateZ(0deg);
+  }
+  33% {
+    transform: translate3d(4px, -7px, 0) rotateX(8deg) rotateZ(1.1deg);
+  }
+  66% {
+    transform: translate3d(-4px, 4px, 0) rotateX(5deg) rotateZ(-1.1deg);
+  }
+}
+
+@keyframes resq-shadow {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scaleX(1);
+  }
+  33% {
+    opacity: 0.36;
+    transform: scaleX(0.9);
+  }
+  66% {
+    opacity: 0.56;
+    transform: scaleX(1.06);
+  }
+}
+
+@keyframes resq-rotor-spin {
+  from {
+    transform: rotateX(74deg) rotateZ(0deg);
+  }
+  to {
+    transform: rotateX(74deg) rotateZ(360deg);
+  }
+}
+
+@keyframes resq-blink {
+  0%,
+  70%,
+  100% {
+    opacity: 0.25;
+  }
+  80%,
+  90% {
+    opacity: 1;
+  }
+}
+
+@keyframes resq-sweep {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(2200%);
+  }
+}
+
+.resq-scanline {
+  animation: resq-sweep 3.2s linear infinite;
+}
+
+.resq-grid {
+  background-image:
+    linear-gradient(rgb(var(--edge) / 0.55) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--edge) / 0.55) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: radial-gradient(ellipse 78% 68% at 50% 45%, #000 30%, transparent 100%);
+}
+
+@keyframes resq-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(9px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.resq-enter {
+  animation: resq-fade-up 0.5s ease-out both;
+}
+
+/* Reduced motion: the drone simply fades in, level and still. */
+@media (prefers-reduced-motion: reduce) {
+  .resq-drone-body,
+  .resq-rotor,
+  .resq-drone-shadow,
+  .resq-nav-light-green,
+  .resq-nav-light-red,
+  .resq-scanline,
+  .resq-enter {
+    animation: none !important;
+  }
+  .resq-drone-body {
+    transform: none;
+  }
+  .resq-drone-shadow {
+    opacity: 0.4;
+  }
+}
+
+@layer utilities {
+  .resq-live-scroll {
+    scrollbar-width: thin;
+  }
+  .resq-live-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+}
