@@ -8,7 +8,11 @@ ResQDrone turns a UAV's sensor feed into rescue-ready intelligence. It combines 
 thermal and visual sensing, and AI-assisted detection with a Ground Command Centre built for one
 rule: **a human always makes the final call.**
 
-![ResQDrone Ground Command Centre](docs/images/hero-command-centre.png)
+<p align="center">
+  <img src="docs/images/ground-command-centre.png" alt="ResQDrone Ground Command Centre" width="100%">
+</p>
+
+<p align="center"><strong>Ground Command Centre — live mission overview</strong></p>
 
 ![SIH 2026](https://img.shields.io/badge/SIH-2026-orange?style=flat-square)
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=white)
@@ -36,6 +40,23 @@ sensor evidence. The operator reviews that evidence and decides — the system n
 its own.
 
 > **AI proposes a detection; the human operator makes the final decision.**
+
+---
+
+## System in Action
+
+<p align="center">
+  <img src="docs/images/ground-command-centre.png" alt="ResQDrone Ground Command Centre" width="100%">
+</p>
+
+<p align="center"><em>Software layer — Ground Command Centre and live mission interface.</em></p>
+
+<p align="center">
+  <img src="docs/images/hardware-drone.png" alt="ResQDrone assembled UAV hardware" width="85%">
+</p>
+
+<p align="center"><em>Hardware layer — assembled UAV platform with onboard sensing and control components.</em></p>
+
 
 ---
 
@@ -137,7 +158,11 @@ flowchart TB
 | TF-Luna LiDAR | Distance |
 | ESP32 | Sensor communication |
 
-![ResQDrone Hardware — assembled UAV frame](docs/images/hardware-drone.png)
+<p align="center">
+  <img src="docs/images/hardware-drone.png" alt="ResQDrone assembled UAV hardware" width="90%">
+</p>
+
+<p align="center"><strong>ResQDrone hardware — assembled UAV platform</strong></p>
 
 ---
 
